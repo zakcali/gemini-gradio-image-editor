@@ -75,7 +75,7 @@ For more details, see the official Gradio guide on [Sharing Your App](https://ww
 
 ## How It Works
 
-This application sends the user-uploaded image and text prompt to the Gemini API, specifically using the `gemini-2.5-flash-image-preview` model. The Gemini model is multimodal and can understand both the image and the text context.
+This application sends the user-uploaded image and text prompt to the Gemini API, specifically using the `gemini-2.5-flash-image-preview` model. As of 6 Sep 2025, this is *Nano Banana* model. The Gemini model is multimodal and can understand both the image and the text context.
 
 Based on the prompt, it will either:
 1.  Return a new image as `inline_data`, which the script then saves as a PNG file and displays.
