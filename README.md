@@ -3,7 +3,7 @@
 A Gradio web interface that uses the Google Gemini API to perform powerful AI-based image editing and analysis. This tool can transform your photos into different art styles, add or remove objects, or simply provide a detailed text description of an image.
 
 
-*Example: Transforming a group photo into a cartoon in the style of Ghibli.*
+*Example: Make him hold a giant trophy.\nOR\nExample: Describe this scene*
 
 ## Features
 
