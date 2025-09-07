@@ -13,14 +13,41 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     print("CRITICAL: GEMINI_API_KEY environment variable not found. The application will not work.")
 
+# --- Directory Setup for Temporary Files ---
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMP_DIR = os.path.join(APP_DIR, "temp")
+os.makedirs(TEMP_DIR, exist_ok=True)
+print(f"Temporary image files will be saved in: {TEMP_DIR}")
+
+
+# --- MODIFICATION: New function to clear the temp directory ---
+def clear_temp_folder():
+    """Deletes all files in the TEMP_DIR and returns a status message."""
+    count = 0
+    try:
+        for filename in os.listdir(TEMP_DIR):
+            file_path = os.path.join(TEMP_DIR, filename)
+            # Make sure it's a file before trying to delete
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+                count += 1
+        
+        if count > 0:
+            return f"✅ Cleared {count} file(s) from the temp directory."
+        else:
+            return "ℹ️ Temp directory is already empty."
+            
+    except Exception as e:
+        print(f"Error clearing temp folder: {e}")
+        return f"❌ Error clearing temp folder: {e}"
+# --- END MODIFICATION ---
+
+
 # --- Core Logic (Unchanged from previous version) ---
 def generate_image_with_gemini(prompt, source_image):
     """
     Generates content based on a prompt.
-    - If only a prompt is given, performs text-to-image generation.
-    - If a prompt and image are given, performs image editing or analysis.
-    Returns an image and download button if the model generates an image.
-    Returns a text description if the model generates text.
+    Saves generated images to a local 'temp' subdirectory for clean downloading.
     """
     if not api_key:
         raise gr.Error("GEMINI_API_KEY environment variable has not been set. Please set it and restart the application.")
@@ -50,13 +77,18 @@ def generate_image_with_gemini(prompt, source_image):
         if generated_image_data is not None:
             result_image = Image.open(BytesIO(generated_image_data))
             timestamp = int(time.time())
-            output_filename = f"generated_image_{timestamp}.png"
-            result_image.save(output_filename)
+            
+            base_filename = f"generated_image_{timestamp}.png"
+            output_filepath = os.path.join(TEMP_DIR, base_filename)
+            result_image.save(output_filepath)
+            
             return (
                 result_image, 
-                gr.update(visible=True, value=output_filename), 
-                gr.update(visible=False, value="")
+                gr.update(visible=True, value=output_filepath), 
+                gr.update(visible=False, value=""),
+                "✅ Image generated successfully!" # Status update
             )
+            
         else:
             text_response = "The model did not return an image or text."
             if response.candidates and response.candidates[0].content.parts:
@@ -66,7 +98,8 @@ def generate_image_with_gemini(prompt, source_image):
             return (
                 None, 
                 gr.update(visible=False), 
-                gr.update(visible=True, value=text_response)
+                gr.update(visible=True, value=text_response),
+                "✅ Text analysis complete." # Status update
             )
 
     except Exception as e:
@@ -74,7 +107,7 @@ def generate_image_with_gemini(prompt, source_image):
         raise gr.Error(f"An API error occurred. Details: {str(e)}")
 
 
-# --- Gradio User Interface (Updated with a clear button) ---
+# --- Gradio User Interface (Updated with clear button and status box) ---
 with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
     gr.Markdown("# 🎨 Gemini Image Generator & Analyzer")
     gr.Markdown("Provide a prompt to generate a new image (text-to-image), OR upload an image to edit/analyze it.")
@@ -87,11 +120,17 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
                 placeholder="Text-to-Image: A photo of a cat programming on a laptop.\n\nImage Editing: Remove the background.\n\nImage Analysis: Describe this scene.",
                 lines=5
             )
-            # --- MODIFICATION START: Add a Row for the buttons ---
+            # --- MODIFICATION: Updated button layout ---
             with gr.Row():
                 clear_btn = gr.Button(value="🗑️ Clear Prompt", scale=1)
-                generate_btn = gr.Button("Generate", variant="primary", scale=3)
-            # --- MODIFICATION END ---
+                generate_btn = gr.Button("Generate", variant="primary", scale=2)
+            # Add a new row for the temp folder clearing button
+            with gr.Row():
+                clear_temp_btn = gr.Button(value="🧹 Clear Temp Files", scale=1)
+            
+            # Add a status box for user feedback
+            status_box = gr.Markdown("")
+            # --- END MODIFICATION ---
 
         with gr.Column(scale=1):
             output_image = gr.Image(label="Generated Image", height=400, show_download_button=False)
@@ -102,17 +141,25 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
     generate_btn.click(
         fn=generate_image_with_gemini,
         inputs=[prompt_box, input_image],
-        outputs=[output_image, download_btn, text_output_box]
+        # Add status_box to the outputs
+        outputs=[output_image, download_btn, text_output_box, status_box]
     )
 
-    # --- MODIFICATION START: Add event handler for the new clear button ---
+    # Event handler for the prompt clear button
     clear_btn.click(
-        fn=lambda: "",           # The function to run is a simple lambda that returns an empty string
-        inputs=None,             # No inputs are needed for this function
-        outputs=[prompt_box],    # The component to update is the prompt_box
-        queue=False              # Run instantly in the browser without queuing
+        fn=lambda: ("", "Prompt cleared."), # Also update the status box
+        inputs=None,
+        outputs=[prompt_box, status_box],
+        queue=False
     )
-    # --- MODIFICATION END ---
+
+    # --- MODIFICATION: Add event handler for the new temp clear button ---
+    clear_temp_btn.click(
+        fn=clear_temp_folder,
+        inputs=None,
+        outputs=[status_box] # Output the status message to the status box
+    )
+    # --- END MODIFICATION ---
 
 if __name__ == "__main__":
     print("Launching Gradio interface...")
