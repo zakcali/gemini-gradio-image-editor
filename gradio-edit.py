@@ -13,27 +13,37 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     print("CRITICAL: GEMINI_API_KEY environment variable not found. The application will not work.")
 
-# --- Core Logic (Modified to handle text responses) ---
+# --- Core Logic (Modified to handle text responses and text-to-image) ---
 def generate_image_with_gemini(prompt, source_image):
     """
-    Generates content based on a prompt and image.
+    Generates content based on a prompt.
+    - If only a prompt is given, performs text-to-image generation.
+    - If a prompt and image are given, performs image editing or analysis.
     Returns an image and download button if the model generates an image.
     Returns a text description if the model generates text.
     """
     if not api_key:
         raise gr.Error("GEMINI_API_KEY environment variable has not been set. Please set it and restart the application.")
-    if source_image is None:
-        raise gr.Error("Please upload a source image.")
     if not prompt or not prompt.strip():
         raise gr.Error("Please enter a prompt.")
 
     client = genai.Client(api_key=api_key)
 
+    # --- MODIFICATION START: Handle both text-to-image and image-editing ---
+    # Prepare the contents for the API call based on whether an image was provided.
+    if source_image is None:
+        # This is a text-to-image request
+        api_contents = [prompt]
+    else:
+        # This is an image editing or analysis request
+        api_contents = [prompt, source_image]
+    # --- MODIFICATION END ---
+
     try:
         model_name = "gemini-2.5-flash-image-preview"
         response = client.models.generate_content(
             model=model_name,
-            contents=[prompt, source_image],
+            contents=api_contents, # Use the dynamically prepared contents
         )
 
         # Check for image data first
@@ -43,7 +53,7 @@ def generate_image_with_gemini(prompt, source_image):
                 generated_image_data = part.inline_data.data
                 break
         
-        # --- NEW LOGIC: Handle either image or text ---
+        # Handle either image or text
         if generated_image_data is not None:
             # --- Case 1: An image was returned ---
             result_image = Image.open(BytesIO(generated_image_data))
@@ -77,17 +87,17 @@ def generate_image_with_gemini(prompt, source_image):
         raise gr.Error(f"An API error occurred. Details: {str(e)}")
 
 
-# --- Gradio User Interface (Updated) ---
-with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Analyzer") as demo:
-    gr.Markdown("# 🎨 Gemini Image Editor & Analyzer")
-    gr.Markdown("Upload an image, then ask to edit it OR ask a question about it (e.g., 'describe this picture').")
+# --- Gradio User Interface (Updated for new functionality) ---
+with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
+    gr.Markdown("# 🎨 Gemini Image Generator & Analyzer")
+    gr.Markdown("Provide a prompt to generate a new image (text-to-image), OR upload an image to edit/analyze it.")
 
     with gr.Row():
         with gr.Column(scale=1):
-            input_image = gr.Image(type="pil", label="Upload Your Image", height=400)
+            input_image = gr.Image(type="pil", label="Upload an Image (Optional)", height=400)
             prompt_box = gr.Textbox(
                 label="Your Prompt",
-                placeholder="Example: Make him hold a giant trophy.\nOR\nExample: Describe this scene.",
+                placeholder="Text-to-Image: A photo of a cat programming on a laptop.\n\nImage Editing: Remove the background.\n\nImage Analysis: Describe this scene.",
                 lines=4
             )
             generate_btn = gr.Button("Generate", variant="primary")
