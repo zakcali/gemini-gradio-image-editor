@@ -13,7 +13,7 @@ api_key = os.environ.get("GEMINI_API_KEY")
 if not api_key:
     print("CRITICAL: GEMINI_API_KEY environment variable not found. The application will not work.")
 
-# --- Core Logic (Modified to handle text responses and text-to-image) ---
+# --- Core Logic (Unchanged from previous version) ---
 def generate_image_with_gemini(prompt, source_image):
     """
     Generates content based on a prompt.
@@ -29,53 +29,40 @@ def generate_image_with_gemini(prompt, source_image):
 
     client = genai.Client(api_key=api_key)
 
-    # --- MODIFICATION START: Handle both text-to-image and image-editing ---
-    # Prepare the contents for the API call based on whether an image was provided.
     if source_image is None:
-        # This is a text-to-image request
         api_contents = [prompt]
     else:
-        # This is an image editing or analysis request
         api_contents = [prompt, source_image]
-    # --- MODIFICATION END ---
 
     try:
         model_name = "gemini-2.5-flash-image-preview"
         response = client.models.generate_content(
             model=model_name,
-            contents=api_contents, # Use the dynamically prepared contents
+            contents=api_contents,
         )
 
-        # Check for image data first
         generated_image_data = None
         for part in response.candidates[0].content.parts:
             if part.inline_data is not None:
                 generated_image_data = part.inline_data.data
                 break
         
-        # Handle either image or text
         if generated_image_data is not None:
-            # --- Case 1: An image was returned ---
             result_image = Image.open(BytesIO(generated_image_data))
             timestamp = int(time.time())
             output_filename = f"generated_image_{timestamp}.png"
             result_image.save(output_filename)
-
-            # Return the image, a visible download button, and hide the text box
             return (
                 result_image, 
                 gr.update(visible=True, value=output_filename), 
                 gr.update(visible=False, value="")
             )
         else:
-            # --- Case 2: No image, so we look for text ---
-            text_response = "The model did not return an image or text." # Default message
+            text_response = "The model did not return an image or text."
             if response.candidates and response.candidates[0].content.parts:
                 text_part = next((p.text for p in response.candidates[0].content.parts if p.text is not None), None)
                 if text_part:
                     text_response = text_part
-            
-            # Return no image, hide the download button, and show the text response
             return (
                 None, 
                 gr.update(visible=False), 
@@ -87,7 +74,7 @@ def generate_image_with_gemini(prompt, source_image):
         raise gr.Error(f"An API error occurred. Details: {str(e)}")
 
 
-# --- Gradio User Interface (Updated for new functionality) ---
+# --- Gradio User Interface (Updated with a clear button) ---
 with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
     gr.Markdown("# 🎨 Gemini Image Generator & Analyzer")
     gr.Markdown("Provide a prompt to generate a new image (text-to-image), OR upload an image to edit/analyze it.")
@@ -98,22 +85,34 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
             prompt_box = gr.Textbox(
                 label="Your Prompt",
                 placeholder="Text-to-Image: A photo of a cat programming on a laptop.\n\nImage Editing: Remove the background.\n\nImage Analysis: Describe this scene.",
-                lines=4
+                lines=5
             )
-            generate_btn = gr.Button("Generate", variant="primary")
+            # --- MODIFICATION START: Add a Row for the buttons ---
+            with gr.Row():
+                clear_btn = gr.Button(value="🗑️ Clear Prompt", scale=1)
+                generate_btn = gr.Button("Generate", variant="primary", scale=3)
+            # --- MODIFICATION END ---
 
         with gr.Column(scale=1):
             output_image = gr.Image(label="Generated Image", height=400, show_download_button=False)
-            # New text box for text responses
             text_output_box = gr.Textbox(label="Model's Text Response", visible=False, lines=15, interactive=False)
             download_btn = gr.DownloadButton(label="Download Image", visible=False)
 
-    # The outputs list now includes the new text box
+    # Event handler for the main generate button
     generate_btn.click(
         fn=generate_image_with_gemini,
         inputs=[prompt_box, input_image],
         outputs=[output_image, download_btn, text_output_box]
     )
+
+    # --- MODIFICATION START: Add event handler for the new clear button ---
+    clear_btn.click(
+        fn=lambda: "",           # The function to run is a simple lambda that returns an empty string
+        inputs=None,             # No inputs are needed for this function
+        outputs=[prompt_box],    # The component to update is the prompt_box
+        queue=False              # Run instantly in the browser without queuing
+    )
+    # --- MODIFICATION END ---
 
 if __name__ == "__main__":
     print("Launching Gradio interface...")
