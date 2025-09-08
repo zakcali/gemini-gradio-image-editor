@@ -3,6 +3,7 @@
 import os
 import gradio as gr
 from google import genai
+from google.genai import errors
 from PIL import Image
 from io import BytesIO
 import tempfile
@@ -87,11 +88,21 @@ def generate_image_with_gemini(prompt, source_image):
                 if text_part:
                     text_response = text_part
             return (None, gr.update(visible=False), gr.update(visible=True, value=text_response), "✅ Text analysis complete.")
+    
+    except errors.APIError as e:
+        print(f"Caught an API Error: {e}")
+        error_message_for_ui = f"❌ API Error ({e.code}): {e.message}"
+        return (
+            None,                           # For output_image
+            gr.update(visible=False),       # For download_btn
+            gr.update(visible=False),       # For text_output_box
+            error_message_for_ui            # For status_box
+        )
     except Exception as e:
-        print(f"An error occurred: {e}")
-        raise gr.Error(f"An API error occurred. Details: {str(e)}")
-
-
+        # Catch any other unexpected errors
+        print(f"An unexpected error occurred: {e}")
+        return (None, gr.update(visible=False), gr.update(visible=False), f"❌ An unexpected error occurred: {e}")
+    
 # --- Gradio User Interface ---
 with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
     # (UI definition is the same as before)
