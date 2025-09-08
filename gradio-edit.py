@@ -40,7 +40,7 @@ if not api_key:
     print("CRITICAL: GEMINI_API_KEY environment variable not found.")
 
 
-# --- Core Logic (Updated to track files) ---
+# --- Core Logic (tracks files) ---
 def generate_image_with_gemini(prompt, source_image):
     if not api_key:
         raise gr.Error("GEMINI_API_KEY not set.")
@@ -70,7 +70,7 @@ def generate_image_with_gemini(prompt, source_image):
                 output_filepath = temp_file.name
                 result_image.save(output_filepath)
             
-            # --- MODIFICATION: Track the file for cleanup ---
+            # --- Track the file for cleanup ---
             temp_files_to_clean.append(output_filepath)
             print(f"Created and tracking temp file: {output_filepath}")
             
@@ -105,7 +105,6 @@ def generate_image_with_gemini(prompt, source_image):
     
 # --- Gradio User Interface ---
 with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
-    # (UI definition is the same as before)
     gr.Markdown("# 🎨 Gemini Image Generator & Analyzer")
     gr.Markdown("Provide a prompt to generate a new image (text-to-image), OR upload an image to edit/analyze it.")
     with gr.Row():
@@ -124,11 +123,6 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
     generate_btn.click(fn=generate_image_with_gemini, inputs=[prompt_box, input_image], outputs=[output_image, download_btn, text_output_box, status_box])
     clear_btn.click(fn=lambda: ("", "Prompt cleared."), inputs=None, outputs=[prompt_box, status_box], queue=False)
     
-    # --- MODIFICATION: Alternative cleanup using Gradio's own lifecycle event ---
-    # This is often even better than atexit for web apps.
-    # demo.unload(cleanup_temp_files, None, None)
-
-
 if __name__ == "__main__":
     print("Launching Gradio interface... Press Ctrl+C to exit.")
     print("Temporary files for this session will be cleaned up automatically on exit.")
