@@ -1,5 +1,3 @@
-# Save this code as a Python file, for example: app.py
-
 import os
 import gradio as gr
 from google import genai
