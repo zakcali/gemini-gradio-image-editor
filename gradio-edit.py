@@ -102,7 +102,7 @@ def generate_image_with_gemini(prompt, source_image):
         return (None, gr.update(visible=False), gr.update(visible=False), f"❌ An unexpected error occurred: {e}")
     
 # --- Gradio User Interface ---
-with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator") as demo:
+with gr.Blocks(title="🎨 Gemini Image & Text Generator") as demo:
     gr.Markdown("# 🎨 Gemini Image Generator & Analyzer")
     gr.Markdown("Provide a prompt to generate a new image (text-to-image), OR upload an image to edit/analyze it.")
     with gr.Row():
@@ -114,7 +114,8 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
                 generate_btn = gr.Button("Generate", variant="primary", scale=2)
             status_box = gr.Markdown("")
         with gr.Column(scale=1):
-            output_image = gr.Image(label="Generated Image", height=400, show_download_button=False)
+            # NEW (Gradio 6.0)
+            output_image = gr.Image(label="Generated Image", height=400, buttons = [])
             text_output_box = gr.Textbox(label="Model's Text Response", visible=False, lines=15, interactive=False)
             download_btn = gr.DownloadButton(label="Download Image", visible=False)
 
@@ -124,4 +125,5 @@ with gr.Blocks(theme=gr.themes.Soft(), title="🎨 Gemini Image & Text Generator
 if __name__ == "__main__":
     print("Launching Gradio interface... Press Ctrl+C to exit.")
     print("Temporary files for this session will be cleaned up automatically on exit.")
-    demo.launch()
+    # NEW (Gradio 6.0)
+    demo.launch(theme=gr.themes.Soft())
