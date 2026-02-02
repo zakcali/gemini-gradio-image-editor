@@ -82,3 +82,10 @@ Based on the prompt, it will either:
 2.  Return a `text` response, which the script displays in a separate text box.
 
 The script gracefully handles both response types, making it a versatile tool for both creative editing and analytical tasks.
+
+## Code migrated for Gradio 6.0
+
+```python
+    # NEW (Gradio 6.0)
+    demo.launch(theme=gr.themes.Soft())
+```
