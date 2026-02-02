@@ -83,7 +83,7 @@ Based on the prompt, it will either:
 
 The script gracefully handles both response types, making it a versatile tool for both creative editing and analytical tasks.
 
-## Code migrated for Gradio 6.0
+## Code migrated to Gradio 6.0
 
 ```python
     # NEW (Gradio 6.0)
